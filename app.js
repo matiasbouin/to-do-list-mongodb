@@ -34,6 +34,12 @@ let item3 = new Item({
 
 let defaultItems = [item1, item2, item3];
 
+let listSchema = {
+    name: String,
+    items: [itemsSchema]
+};
+
+let List = mongoose.model("List", listSchema);
 
 
 app.get("/", function (req, res) {
@@ -49,13 +55,13 @@ app.get("/", function (req, res) {
                     console.log("Default Items added succesfully");
                 }
             });
-            
+
             res.redirect("/");
 
         } else {
 
-            res.render("list", { listTitle: "Today", newListItems: foundItems});
-        
+            res.render("list", { listTitle: "Today", newListItems: foundItems });
+
         }
 
     });
@@ -73,6 +79,32 @@ app.post("/", function (req, res) {
     item.save();
 
     res.redirect("/");
+
+});
+
+app.post("/delete", callback = (req, res) => {
+    console.log(req.body.checkbox);
+
+    let checkedItemId = req.body.checkbox; 
+
+    Item.deleteOne({ _id: checkedItemId }, callback = (err) => {
+        if (err) {
+            console.log(err);
+        } else {
+            console.log("Document", checkedItemId, "succesfully deleted");
+        }
+
+        res.redirect("/");
+
+    });
+
+    
+
+});
+
+app.get("/:customListName", callback = (req, res) => {
+    let constantListName = req.params.customListName;
+
 
 });
 
