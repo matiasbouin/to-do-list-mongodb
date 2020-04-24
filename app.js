@@ -1,6 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
+const _ = require("lodash");
 
 const app = express();
 
@@ -34,12 +35,14 @@ let item3 = new Item({
 
 let defaultItems = [item1, item2, item3];
 
-let listSchema = {
+let listSchema = new mongoose.Schema({
     name: String,
-    items: [itemsSchema]
-};
+    items: [itemSchema]
+});
 
 let List = mongoose.model("List", listSchema);
+
+
 
 
 app.get("/", function (req, res) {
@@ -71,41 +74,80 @@ app.get("/", function (req, res) {
 app.post("/", function (req, res) {
 
     const itemName = req.body.newItem;
+    const listName = req.body.list;
 
     let item = new Item({
         name: itemName
     });
 
-    item.save();
+    if (listName === "Today") {
+        item.save();
+        res.redirect("/");
+    } else {
+        List.findOne({ name: listName }, callback = (err, foundList) => {
+            if (!foundList) {
+                console.log("Not found")
+            } else {
+                foundList.items.push(item);
+                foundList.save();
+                res.redirect("/" + listName);
+            }
 
-    res.redirect("/");
-
+        });
+    }
 });
 
 app.post("/delete", callback = (req, res) => {
     console.log(req.body.checkbox);
 
-    let checkedItemId = req.body.checkbox; 
+    let checkedItemId = req.body.checkbox;
+    let listName = req.body.listName;
 
-    Item.deleteOne({ _id: checkedItemId }, callback = (err) => {
-        if (err) {
-            console.log(err);
-        } else {
-            console.log("Document", checkedItemId, "succesfully deleted");
-        }
+    if (listName === "Today") {
+        Item.deleteOne({ _id: checkedItemId }, callback = (err) => {
+            if (err) {
+                console.log(err);
+            } else {
+                console.log("Document", checkedItemId, "succesfully deleted");
+            }
 
-        res.redirect("/");
+            res.redirect("/");
 
-    });
-
-    
+        });
+    } else {
+        List.findOneAndUpdate({name: listName}, {$pull: {items: {_id: checkedItemId}}}, callback = (err, foundList) => {
+            if (!err) {
+                res.redirect("/" + listName);
+            }
+        });
+    }
 
 });
 
 app.get("/:customListName", callback = (req, res) => {
-    let constantListName = req.params.customListName;
+    let customListName = _.capitalize(req.params.customListName);
 
+    List.findOne({ name: customListName }, callback = (err, foundList) => {
+        if (!err) {
+            if (!foundList) {
 
+                let list = new List({
+                    name: customListName,
+                    items: defaultItems
+                });
+
+                list.save();
+
+                console.log("Doesn't exists: List has been created");
+
+                res.redirect("/" + customListName);
+
+            } else {
+
+                res.render("list", { listTitle: foundList.name, newListItems: foundList.items });
+            }
+        }
+    });
 });
 
 app.listen(3000, function () {
